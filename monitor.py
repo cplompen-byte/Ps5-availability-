@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -26,19 +27,21 @@ HEADERS = {
 
 
 def check(url: str) -> str:
-    """Geeft 'available', 'sold_out' of 'error' terug."""
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=30)
-    except requests.RequestException as e:
-        print(f"  fout: {e}")
-        return "error"
-    if r.status_code != 200:
-        print(f"  HTTP {r.status_code}")
-        return "error"
-    text = r.text.lower()
-    if any(m in text for m in SOLD_OUT_MARKERS):
-        return "sold_out"
-    return "available"
+    """Geeft 'available', 'sold_out' of 'error' terug. Probeert tot 3 keer."""
+    for attempt in range(1, 4):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=30)
+            if r.status_code == 200:
+                text = r.text.lower()
+                if any(m in text for m in SOLD_OUT_MARKERS):
+                    return "sold_out"
+                return "available"
+            print(f"  poging {attempt}: HTTP {r.status_code}")
+        except requests.RequestException as e:
+            print(f"  poging {attempt}: fout: {e}")
+        if attempt < 3:
+            time.sleep(10)
+    return "error"
 
 
 def notify(topic: str, title: str, message: str, click: str | None = None, priority: str = "default"):
@@ -51,32 +54,49 @@ def notify(topic: str, title: str, message: str, click: str | None = None, prior
     urllib.request.urlopen(req, timeout=30).read()
 
 
+ERROR_NOTIFY_AFTER = 3  # aantal opeenvolgende mislukte runs voor een foutmelding
+
+
 def main():
     topic = os.environ.get("NTFY_TOPIC")
     if not topic:
         sys.exit("NTFY_TOPIC ontbreekt (zie README).")
 
-    old = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else None
+    raw = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else None
+    old = None
+    if raw is not None:
+        # Oud formaat (alleen tekst) omzetten naar nieuw formaat.
+        old = {n: v if isinstance(v, dict) else {"status": v, "errors": 0}
+               for n, v in raw.items()}
+
     new = {}
+    results = {}
     for name, url in PRODUCTS.items():
         print(f"{name}:")
         status = check(url)
         print(f"  -> {status}")
-        new[name] = status
+        results[name] = status
 
     if old is None:
-        # Eerste run: stuur een overzicht zodat je kunt controleren of het werkt.
-        lines = [f"{n}: {s}" for n, s in new.items()]
+        lines = [f"{n}: {s}" for n, s in results.items()]
         notify(topic, "PS5-monitor gestart", "\n".join(lines))
+        new = {n: {"status": s, "errors": 1 if s == "error" else 0}
+               for n, s in results.items()}
     else:
-        for name, status in new.items():
-            prev = old.get(name)
-            if status == "available" and prev != "available":
-                notify(topic, f"{name} is beschikbaar!", "Snel zijn, deze zijn vaak snel weg.",
-                       click=PRODUCTS[name], priority="urgent")
-            elif status == "error" and prev != "error":
-                notify(topic, f"{name}: pagina niet te laden",
-                       "De site blokkeert het script mogelijk.", priority="low")
+        for name, status in results.items():
+            prev = old.get(name, {"status": None, "errors": 0})
+            if status == "error":
+                errors = prev["errors"] + 1
+                new[name] = {"status": prev["status"], "errors": errors}
+                if errors == ERROR_NOTIFY_AFTER:
+                    notify(topic, f"{name}: pagina al {errors} keer niet te laden",
+                           "De site blokkeert het script mogelijk.", priority="low")
+            else:
+                new[name] = {"status": status, "errors": 0}
+                if status == "available" and prev["status"] != "available":
+                    notify(topic, f"{name} is beschikbaar!",
+                           "Snel zijn, deze zijn vaak snel weg.",
+                           click=PRODUCTS[name], priority="urgent")
 
     STATE_FILE.write_text(json.dumps(new, indent=2) + "\n")
 
