@@ -21,6 +21,7 @@ PRODUCTS = {
     "PS5 Slim Digital Edition (refurbished)": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim-digital-edition/product/PSD001-PSDE00234_23-PS5GRADEDDMBTOTE/",
     "PS5 1 TB disc": "https://www.playstation.com/nl-nl/ps5/1-tb-disc/product/PSD001-PSDE01929_59-PS5CONSOLEHB2OYE/",
     "PS5 Ghost of Yotei bundle": "https://www.playstation.com/nl-nl/ps5/ghost-of-yotei-limited-edition-bundle-black/product/playstation-5-console-model-group-slim/",
+    "Xbox Series X (refurbished)": "https://www.microsoft.com/nl-nl/d/xbox-series-x-gecertificeerd-gereviseerd/8zj26xj5cr3q?activetab=pivot:overzichttab",
     "PS5 Digital Edition 825 GB": "https://www.playstation.com/nl-nl/ps5/digital-edition-825-gb/product/PSD001-PSDE01916_79-PS5DIGITALKKBAEE/",
 }
 
@@ -42,6 +43,14 @@ NOT_BUYABLE_WORDS = ("UNAVAILABLE", "SOLD", "OUT_OF_STOCK", "NOT_AVAILABLE")
 
 def classify(url: str, html: str) -> str:
     """Bepaalt 'available' of 'sold_out' uit de pagina-HTML."""
+    if "microsoft.com" in url:
+        text = html.lower()
+        if "niet op voorraad" in text:
+            return "sold_out"
+        if "toevoegen aan winkelwagen" in text or "in winkelwagen" in text:
+            return "available"
+        print("  geen duidelijk voorraadsignaal gevonden")
+        return "error"
     product_id = url.rstrip("/").split("/")[-1]
     ctas = CTA_RE.findall(html)
     # Alleen de knop van dit product, als die te vinden is (anders alle knoppen op de pagina).
