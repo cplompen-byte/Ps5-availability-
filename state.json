@@ -6,5 +6,21 @@
   "PS5 console (refurbished)": {
     "status": "sold_out",
     "errors": 0
+  },
+  "PS5 Slim Digital Edition (refurbished)": {
+    "status": "sold_out",
+    "errors": 0
+  },
+  "PS5 1 TB disc": {
+    "status": "sold_out",
+    "errors": 0
+  },
+  "PS5 Ghost of Yotei bundle": {
+    "status": "sold_out",
+    "errors": 0
+  },
+  "PS5 Digital Edition 825 GB": {
+    "status": "sold_out",
+    "errors": 0
   }
 }
