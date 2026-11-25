@@ -1,4 +1,10 @@
 {
-  "PS5 Slim (refurbished)": "sold_out",
-  "PS5 console (refurbished)": "sold_out"
+  "PS5 Slim (refurbished)": {
+    "status": "sold_out",
+    "errors": 0
+  },
+  "PS5 console (refurbished)": {
+    "status": "sold_out",
+    "errors": 0
+  }
 }
