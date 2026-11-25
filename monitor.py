@@ -10,6 +10,11 @@ from pathlib import Path
 
 import requests
 
+try:
+    from curl_cffi import requests as cffi_requests  # doet zich voor als echte Chrome
+except ImportError:  # terugval als het pakket ontbreekt
+    cffi_requests = None
+
 PRODUCTS = {
     "PS5 Slim (refurbished)": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim/product/PSD001-PSDE00233_59-PS5GRADEDCLIZSLE/",
     "PS5 console (refurbished)": "https://www.playstation.com/nl-nl/ps5/certified-refurbished/product/PSD001-PSDE01840_63-PS5GRADEDCEC7XZE/",
@@ -52,15 +57,26 @@ def classify(url: str, html: str) -> str:
     return "sold_out" if any(m in text for m in SOLD_OUT_MARKERS) else "available"
 
 
+def fetch(url: str):
+    if cffi_requests is not None:
+        return cffi_requests.get(
+            url,
+            headers={"Accept-Language": HEADERS["Accept-Language"]},
+            impersonate="chrome",
+            timeout=30,
+        )
+    return requests.get(url, headers=HEADERS, timeout=30)
+
+
 def check(url: str) -> str:
     """Geeft 'available', 'sold_out' of 'error' terug. Probeert tot 3 keer."""
     for attempt in range(1, 4):
         try:
-            r = requests.get(url, headers=HEADERS, timeout=30)
+            r = fetch(url)
             if r.status_code == 200:
                 return classify(url, r.text)
             print(f"  poging {attempt}: HTTP {r.status_code}")
-        except requests.RequestException as e:
+        except Exception as e:
             print(f"  poging {attempt}: fout: {e}")
         if attempt < 3:
             time.sleep(10)
