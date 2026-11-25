@@ -12,6 +12,10 @@ import requests
 PRODUCTS = {
     "PS5 Slim (refurbished)": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim/product/PSD001-PSDE00233_59-PS5GRADEDCLIZSLE/",
     "PS5 console (refurbished)": "https://www.playstation.com/nl-nl/ps5/certified-refurbished/product/PSD001-PSDE01840_63-PS5GRADEDCEC7XZE/",
+    "PS5 Slim Digital Edition (refurbished)": "https://www.playstation.com/nl-nl/ps5/certified-refurbished-ps5-slim-digital-edition/product/PSD001-PSDE00234_23-PS5GRADEDDMBTOTE/",
+    "PS5 1 TB disc": "https://www.playstation.com/nl-nl/ps5/1-tb-disc/product/PSD001-PSDE01929_59-PS5CONSOLEHB2OYE/",
+    "PS5 Ghost of Yotei bundle": "https://www.playstation.com/nl-nl/ps5/ghost-of-yotei-limited-edition-bundle-black/product/playstation-5-console-model-group-slim/",
+    "PS5 Digital Edition 825 GB": "https://www.playstation.com/nl-nl/ps5/digital-edition-825-gb/product/PSD001-PSDE01916_79-PS5DIGITALKKBAEE/",
 }
 
 # Als een van deze teksten op de pagina staat, is het product niet beschikbaar.
