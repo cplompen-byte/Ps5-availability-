@@ -2,6 +2,7 @@
 """Bewaakt PlayStation-productpagina's en stuurt een ntfy-pushmelding bij wijzigingen."""
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -30,16 +31,34 @@ HEADERS = {
 }
 
 
+CTA_RE = re.compile(r'\\?"activeCtaId\\?":\\?"([A-Z_]+):([^"\\]*)')
+NOT_BUYABLE_WORDS = ("UNAVAILABLE", "SOLD", "OUT_OF_STOCK", "NOT_AVAILABLE")
+
+
+def classify(url: str, html: str) -> str:
+    """Bepaalt 'available' of 'sold_out' uit de pagina-HTML."""
+    product_id = url.rstrip("/").split("/")[-1]
+    ctas = CTA_RE.findall(html)
+    # Alleen de knop van dit product, als die te vinden is (anders alle knoppen op de pagina).
+    own = [c for c in ctas if product_id in c[1]] or ctas
+    if own:
+        types = sorted({c[0] for c in own})
+        print(f"  knoptype(s): {', '.join(types)}")
+        buyable = [t for t in types if not any(w in t for w in NOT_BUYABLE_WORDS)]
+        return "available" if buyable else "sold_out"
+    # Geen productdata gevonden: terugvallen op de zichtbare tekst.
+    print("  geen productdata gevonden, tekst-check gebruikt")
+    text = html.lower()
+    return "sold_out" if any(m in text for m in SOLD_OUT_MARKERS) else "available"
+
+
 def check(url: str) -> str:
     """Geeft 'available', 'sold_out' of 'error' terug. Probeert tot 3 keer."""
     for attempt in range(1, 4):
         try:
             r = requests.get(url, headers=HEADERS, timeout=30)
             if r.status_code == 200:
-                text = r.text.lower()
-                if any(m in text for m in SOLD_OUT_MARKERS):
-                    return "sold_out"
-                return "available"
+                return classify(url, r.text)
             print(f"  poging {attempt}: HTTP {r.status_code}")
         except requests.RequestException as e:
             print(f"  poging {attempt}: fout: {e}")
